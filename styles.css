@@ -1,0 +1,71 @@
+.red {
+    background-color: #FF2222;
+}
+
+.green {
+    background-color: #22DD22;
+}
+
+.blue {
+    background-color: #4444FF;
+}
+
+.red.green {
+    background-color: #BB9922;
+}
+
+.red.blue {
+    background-color: #BB44BB;
+}
+
+.green.blue {
+    background-color: #4499BB;
+}
+
+.red.green.blue {
+    background-color: #886688;
+}
+
+.highlight {
+    background-color: #444444;
+}
+
+.highlight.red {
+    background-color: #DD0000;
+}
+
+.highlight.green {
+    background-color: #00AA00;
+}
+
+.highlight.blue {
+    background-color: #2222DD;
+}
+
+.highlight.red.green {
+    background-color: #996600;
+}
+
+.highlight.red.blue {
+    background-color: #990099;
+}
+
+.highlight.green.blue {
+    background-color: #006699;
+}
+
+.highlight.red.green.blue {
+    background-color: #666666;
+}
+
+.station {
+    color: #FFFFFF;
+}
+
+#turns {
+    float: left;
+}
+
+#cards {
+    float: right;
+}
