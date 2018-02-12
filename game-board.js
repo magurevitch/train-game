@@ -243,71 +243,79 @@ TurnController.prototype.getRandom = function() {
 }
 
 TurnController.prototype.populateCity = function() {
-    //These update turns
     var last = this.turnOrder.shift();
     this.turnOrder.push(last);
     this.updateTurnOrder();
+    
     $('#build').removeClass(last);
     $('#add-in').addClass(this.turnOrder[0]);
     
     var card = this.getRandom();
     $('#active').html(card);
     this.board.addCard(card);
+    
+    //go on to next phase
+    $('#turns').on('click', () => {
+        $('#turns').off('click');
+        $('#add-in').removeClass(this.turnOrder[0]);
+        $('#trips').addClass(this.turnOrder[0]);
+        this.takeTrip(this.board.trips);
+    });
 }
 
-TurnController.prototype.tripPhase = function() {
-    function helper(tripsLeft) {
-        if(tripsLeft == 0) {
-            console.log('ready for next phase');
-        } else {
-            console.log(tripsLeft);
-            helper(tripsLeft - 1);
-        }
-    }
-    helper(this.board.trips);
-}
-
-TurnController.prototype.takeTrip = function() {
-    var start = this.board.chooseCard();
-    var end = this.board.chooseCard();
-    $('#active').html(start + ' -> ' + end);
-    $('#flips').html(this.board.trips);
-    
-    var winners = this.board.bestPath(start,end);
-    
-    if(winners.steps < this.closeDist) {
-        $('#primary').html('<th>choose who to intensify:</th>');
+TurnController.prototype.intensify = function(times,steps,end) {
+    if(steps < this.closeDist) {
+        $('#secondary').html('<th>choose who to intensify:</th>');
         var neighbors = this.board.getNeighbors(end).filter(x => this.board.cardsLeft[x] > 0);
         neighbors.forEach(neighbor => {
             $('#' + neighbor).addClass('highlight');
-            $('#primary').append('<td>' + neighbor + '</td>');
+            $('#secondary').append('<td>' + neighbor + '</td>');
         });
         
-        var board = this.board;
-        $('#primary td').on('click',function(){
+        var that = this;
+        $('#secondary td,td.highlight').on('click',function(){
             var spot = parseInt($(this).html());
-            board.addCard(spot);
-            $('#primary').html("");
+            that.board.addCard(spot);
+            $('#secondary').html("");
             $('td').removeClass('highlight');
             $('#active').html(spot);
+            that.takeTrip(times-1);
         });
     } else {
-        $('#primary').html('distance: ' + winners.steps);
+        this.takeTrip(times-1);
     }
+}
 
-    if(winners.modes.length > 1) {
-        $('#secondary').html('<th>choose the winners:</th>');
-        winners.modes.forEach(mode => {
-            $('#secondary').append('<td>' + mode.join() + '</td>');
-            var child = $('#secondary td').last();
-            mode.forEach(path => child.addClass(path));
-            child.on('click',() => {
-                this.scoreWinners(mode);
-                $('#secondary').html("");
-            });
-        });
+TurnController.prototype.takeTrip = function(times) {
+    if(times < 1){
+        $('#primary').html('');
+       this.buildFirst();
     } else {
-        this.scoreWinners(winners.modes[0]);
+        var start = this.board.chooseCard();
+        var end = this.board.chooseCard();
+        $('#active').html(start + ' -> ' + end);
+        $('#flips').html(this.board.trips);
+        
+        var winners = this.board.bestPath(start,end);
+        
+        $('#primary').html('<th>distance:</th><td>' + winners.steps + '</td>');
+    
+        if(winners.modes.length > 1) {
+            $('#secondary').html('<th>choose the winners:</th>');
+            winners.modes.forEach(mode => {
+                $('#secondary').append('<td>' + mode.join() + '</td>');
+                var child = $('#secondary td').last();
+                mode.forEach(path => child.addClass(path));
+                child.on('click',() => {
+                    this.scoreWinners(mode);
+                    $('#secondary').html("");
+                    this.intensify(times,winners.steps,end);
+                });
+            });
+        } else {
+            this.scoreWinners(winners.modes[0]);
+            this.intensify(times,winners.steps,end);
+        }
     }
 }
 
@@ -317,8 +325,26 @@ TurnController.prototype.scoreWinners = function(winners) {
     this.updateTurnOrder();
 }
 
+TurnController.prototype.buildFirst = function() {
+    $("#trips").removeClass(this.turnOrder[0]);
+    $("#build").addClass(this.turnOrder[0]);
+    
+    this.buildSecond();
+}
+
+TurnController.prototype.buildSecond = function() {
+    if(this.board.trips === 0 && this.board.cardsInPlay.length > 9){
+        this.board.trips = 1;
+    }
+    
+    $('#turns').on('click', ()=> {
+        $('#turns').off('click');
+        this.populateCity();
+    });
+}
+
 $(document).ready(function(){
-    var turnController = new TurnController(10,10,['red','blue','green'],5,6);
+    var turnController = new TurnController(10,10,['red','blue','green'],5,5);
     [2,12,22,32,42,52,62,72,82,92].forEach(x => {
         turnController.board.setColor(x,'red',true);
         $('#' + x).addClass('red');
@@ -335,8 +361,4 @@ $(document).ready(function(){
         turnController.board.setStation(x,true);
         $('#' + x).addClass('station');
     });
-    
-    turnController.populateCity();
-    turnController.takeTrip();
-    turnController.tripPhase();
 });
