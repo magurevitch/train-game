@@ -1,70 +1,20 @@
-Array.prototype.concatIfAbsent = function(item) {
-    if(this.indexOf(item) < 0) {
-        return this.concat(item);
-    }
-    return this;
-}
-
-Array.prototype.getShortests = function() {
-    var shortests = [];
-    var shortLength = 50;
-    this.forEach(function(item) {
-        if(item.length < shortLength) {
-            shortests = [item];
-            shortLength = item.length;
-        } else if (item.length === shortLength && shortests.every(x => x.join() !== item.join())){
-            shortests.push(item);
-        }
-    });
-    return shortests;
-}
-
-//taken from https://bost.ocks.org/mike/shuffle/
-//This is the Fisher-Yates Shuffle
-Array.prototype.shuffle = function () {
-  var m = this.length, t, i;
-
-  while (m) {
-    i = Math.floor(Math.random() * m--);
-
-    // And swap it with the current element.
-    t = this[m];
-    this[m] = this[i];
-    this[i] = t;
-  }
-}
-
-function Board(width, height, players, numCards) {
+function Board(width, height, players) {
     this.height = height;
     this.width = width;
     this.players = players;
-    this.spaces = [];
-    this.cardsLeft = [];
-    this.cardsInPlay = [];
-    this.cardsIndex = -1;
-    this.trips = 0;
-    
-    for(var i = 0; i < this.height * this.width; i++) {
-        this.spaces.push({'index':i});
-        this.cardsLeft.push(numCards);
-    }
+    this.spaces = range(this.height*this.width,{});
 }
 
 Board.prototype.getNeighbors = function(index) {
-    var neighbors = [];
-    if(index >= this.width) {
-        neighbors.push(index - this.width);
-    }
+    var neighbors = [index-this.width];
     if((index % this.width) > 0) {
         neighbors.push(index - 1);
-        }
+    }
     if((index % this.width) < (this.width - 1)) {
         neighbors.push(index + 1);
     }
-    if((index + this.width) < (this.height * this.width)) {
-        neighbors.push(index + this.width);
-    }
-    return neighbors;
+    neighbors.push(index + this.width);
+    return neighbors.filter(x => x > -1 && x < this.height * this.width);
 };
 
 Board.prototype.getNextStops = function(space, color) {
@@ -89,7 +39,6 @@ Board.prototype.getNextStops = function(space, color) {
 
 Board.prototype.setColor = function(space,color,value) {
     this.spaces[space][color] = value;
-    this.depopulate(space);
 };
 
 Board.prototype.setStation = function(space,value) {
@@ -167,24 +116,36 @@ Board.prototype.bestPath = function(start, end) {
 Board.prototype.getOptions = function(space,color) {
     if(this.spaces[space][color]) {
         if(this.spaces[space].station) {
-            return 'remove station';
+            return {'text':'remove station','function':()=>this.setStation(space,false)};
         }
-        return 'build station';
+        return {
+            'text':'build station',
+            'function':()=>this.setStation(space,true),
+            'alternate':'remove tracks',
+            'alternate function':()=>this.setColor(space,color,false),
+        };
     }
     if(this.players.some(x => this.spaces[space][x])) {
-        return 'track 2';
+        return {'text':'build track underneath','function':()=>this.setColor(space,color,true),'two turn':true};
     }
-    return 'track 1';
+    return {'text':'build track','function':()=>this.setColor(space,color,true)};
+};
+
+function Cards(numberOfTiles,numCards) {
+    this.cardsLeft = range(numberOfTiles,numCards);
+    this.cardsInPlay = [];
+    this.cardsIndex = -1;
+    this.trips = 0;
 }
 
-Board.prototype.addCard = function(index) {
+Cards.prototype.addCard = function(index) {
     if(this.cardsLeft[index] > 0) {
         this.cardsLeft[index]--;
         this.cardsInPlay.push(index);
     }
-}
+};
 
-Board.prototype.chooseCard = function() {
+Cards.prototype.chooseCard = function() {
     if(this.cardsIndex < 1) {
         this.cardsInPlay.shuffle();
         this.cardsIndex = this.cardsInPlay.length;
@@ -192,10 +153,10 @@ Board.prototype.chooseCard = function() {
     }
     this.cardsIndex--;
     return this.cardsInPlay[this.cardsIndex];
-}
+};
 
 //This uses the rule that if you have it in the cards left to draw, you discard until you find it
-Board.prototype.depopulate = function(card) {
+Cards.prototype.depopulate = function(card) {
     var index = this.cardsInPlay.lastIndexOf(card);
     if(index > -1) {
         if(index < this.cardsIndex) {
@@ -203,162 +164,4 @@ Board.prototype.depopulate = function(card) {
         }
         this.cardsInPlay.splice(index,1);
     }
-}
-
-function TurnController(width,height,players,numCards,closeDist) {
-    this.board = new Board(width,height,players,numCards);
-    this.turnOrder = players;
-    this.actions = 2;
-    this.scores = {};
-    this.closeDist = closeDist;
-    players.forEach(player => this.scores[player] = 0);
-    this.populate();
-}
-
-TurnController.prototype.populate = function(){
-    $('#turns td').attr('colspan',this.turnOrder.length);
-    this.updateTurnOrder();
-    
-    var width = this.board.spaces.slice(0,this.board.width).map(x => x.index);
-    var height = this.board.spaces.slice(0,this.board.height).map(x => x.index);
-    $('#game-board').append('<tr><th></th><th>' + width.join('</th><th>') + '</th></tr>');
-    height.forEach(function(j){
-        $('#game-board').append('<tr><th>' + j + width.map(function(i){return '<td id=' + (j*width.length + i) + '>' + (j*width.length + i) + '</td>'}).join('') + '</th></tr>');
-    });
-    this.populateCity();
-}
-
-TurnController.prototype.updateTurnOrder = function() {
-    $('#turn-order').html("");
-    $('#scores').html("");
-    var scores = this.scores;
-    this.turnOrder.forEach(function(player){
-        $('#turn-order').append('<td class=' + player + '>' + player + '</td>');
-        $('#scores').append('<td class=' + player + '>' + scores[player] + '</td>');
-    });
-}
-
-TurnController.prototype.getRandom = function() {
-    return Math.floor(Math.random() * this.board.height * this.board.width);
-}
-
-TurnController.prototype.populateCity = function() {
-    var last = this.turnOrder.shift();
-    this.turnOrder.push(last);
-    this.updateTurnOrder();
-    
-    $('#build').removeClass(last);
-    $('#add-in').addClass(this.turnOrder[0]);
-    
-    var card = this.getRandom();
-    $('#active').html(card);
-    this.board.addCard(card);
-    
-    //go on to next phase
-    $('#turns').on('click', () => {
-        $('#turns').off('click');
-        $('#add-in').removeClass(this.turnOrder[0]);
-        $('#trips').addClass(this.turnOrder[0]);
-        this.takeTrip(this.board.trips);
-    });
-}
-
-TurnController.prototype.intensify = function(times,steps,end) {
-    if(steps < this.closeDist) {
-        $('#secondary').html('<th>choose who to intensify:</th>');
-        var neighbors = this.board.getNeighbors(end).filter(x => this.board.cardsLeft[x] > 0);
-        neighbors.forEach(neighbor => {
-            $('#' + neighbor).addClass('highlight');
-            $('#secondary').append('<td>' + neighbor + '</td>');
-        });
-        
-        var that = this;
-        $('#secondary td,td.highlight').on('click',function(){
-            var spot = parseInt($(this).html());
-            that.board.addCard(spot);
-            $('#secondary').html("");
-            $('td').removeClass('highlight');
-            $('#active').html(spot);
-            that.takeTrip(times-1);
-        });
-    } else {
-        this.takeTrip(times-1);
-    }
-}
-
-TurnController.prototype.takeTrip = function(times) {
-    if(times < 1){
-        $('#primary').html('');
-       this.buildFirst();
-    } else {
-        var start = this.board.chooseCard();
-        var end = this.board.chooseCard();
-        $('#active').html(start + ' -> ' + end);
-        $('#flips').html(this.board.trips);
-        
-        var winners = this.board.bestPath(start,end);
-        
-        $('#primary').html('<th>distance:</th><td>' + winners.steps + '</td>');
-    
-        if(winners.modes.length > 1) {
-            $('#secondary').html('<th>choose the winners:</th>');
-            winners.modes.forEach(mode => {
-                $('#secondary').append('<td>' + mode.join() + '</td>');
-                var child = $('#secondary td').last();
-                mode.forEach(path => child.addClass(path));
-                child.on('click',() => {
-                    this.scoreWinners(mode);
-                    $('#secondary').html("");
-                    this.intensify(times,winners.steps,end);
-                });
-            });
-        } else {
-            this.scoreWinners(winners.modes[0]);
-            this.intensify(times,winners.steps,end);
-        }
-    }
-}
-
-TurnController.prototype.scoreWinners = function(winners) {
-    var score = (winners.length > 1) ? 1 : 2;
-    winners.forEach(x => this.scores[x] += score);
-    this.updateTurnOrder();
-}
-
-TurnController.prototype.buildFirst = function() {
-    $("#trips").removeClass(this.turnOrder[0]);
-    $("#build").addClass(this.turnOrder[0]);
-    
-    this.buildSecond();
-}
-
-TurnController.prototype.buildSecond = function() {
-    if(this.board.trips === 0 && this.board.cardsInPlay.length > 9){
-        this.board.trips = 1;
-    }
-    
-    $('#turns').on('click', ()=> {
-        $('#turns').off('click');
-        this.populateCity();
-    });
-}
-
-$(document).ready(function(){
-    var turnController = new TurnController(10,10,['red','blue','green'],5,5);
-    [2,12,22,32,42,52,62,72,82,92].forEach(x => {
-        turnController.board.setColor(x,'red',true);
-        $('#' + x).addClass('red');
-    });
-    [4,14,24,34,44,54,64,74,84,94].forEach(x => {
-        turnController.board.setColor(x,'blue',true);
-        $('#' + x).addClass('blue');
-    });
-    [20,21,22,23,24,25,26,27].forEach(x => {
-        turnController.board.setColor(x,'green',true);
-        $('#' + x).addClass('green');
-    });
-    [2,4,20,23,27,92,94].forEach(x => {
-        turnController.board.setStation(x,true);
-        $('#' + x).addClass('station');
-    });
-});
+};
