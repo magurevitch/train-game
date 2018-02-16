@@ -2,7 +2,7 @@ function Board(width, height, players) {
     this.height = height;
     this.width = width;
     this.players = players;
-    this.spaces = range(this.height*this.width,{});
+    this.spaces = range(this.height*this.width).map(x => {return {};});
 }
 
 Board.prototype.getNeighbors = function(index) {

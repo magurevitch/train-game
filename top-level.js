@@ -42,21 +42,5 @@ function range(limit,fill) {
 }
 
 $(document).ready(function(){
-    var turnController = new TurnController(10,10,['red','blue','green'],5,5);
-    [2,12,22,32,42,52,62,72,82,92].forEach(x => {
-        turnController.board.setColor(x,'red',true);
-        $('#' + x).addClass('red');
-    });
-    [4,14,24,34,44,54,64,74,84,94].forEach(x => {
-        turnController.board.setColor(x,'blue',true);
-        $('#' + x).addClass('blue');
-    });
-    [20,21,22,23,24,25,26,27].forEach(x => {
-        turnController.board.setColor(x,'green',true);
-        $('#' + x).addClass('green');
-    });
-    [2,4,20,23,27,92,94].forEach(x => {
-        turnController.board.setStation(x,true);
-        $('#' + x).addClass('station');
-    });
+    var turnController = new TurnController(10,10,['red','blue'],5,5);
 });

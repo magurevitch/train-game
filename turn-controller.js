@@ -32,6 +32,16 @@ TurnController.prototype.updateTurnOrder = function() {
     });
 };
 
+TurnController.prototype.renderBoard = function() {
+    var spaces = this.board.spaces;
+    var indices = range(spaces.length);
+    
+    this.turnOrder.concat('station').map(function(x){
+        $('#game-board td').removeClass(x);
+        indices.filter(y => spaces[y][x]).map(y => $('#' + y).addClass(x));
+    });
+};
+
 TurnController.prototype.getRandom = function() {
     return Math.floor(Math.random() * this.cards.cardsLeft.length);
 };
@@ -74,8 +84,14 @@ TurnController.prototype.intensify = function(times,steps,end) {
             $('td').off('click');
             $('td').removeClass('highlight');
             $('#active').html(spot);
-            that.takeTrip(times-1);
+            if(typeof times === 'function'){
+                times();
+            } else {
+                that.takeTrip(times-1);
+            }
         });
+    } else if(typeof times === 'function'){
+        times();
     } else {
         this.takeTrip(times-1);
     }
@@ -120,20 +136,87 @@ TurnController.prototype.scoreWinners = function(winners) {
     this.updateTurnOrder();
 };
 
+TurnController.prototype.buildHelper = function(space,optionName,popCondition) {
+    this.renderBoard();
+    $('#primary,#secondary').off();
+    this.cards.depopulate(space);
+    $('#primary,#secondary').html("");
+    $('#game-board td').off();
+    $('#game-board td').removeClass('highlight');
+    var nextTurn = ()=>(popCondition ? this.populateCity() : this.buildSecond());
+    
+    if(optionName === 'build station'){
+        this.takeTrip(nextTurn);
+    } else {
+        nextTurn();
+    }
+};
+
 TurnController.prototype.buildFirst = function() {
     $("#trips").removeClass(this.turnOrder[0]);
     $("#build").addClass(this.turnOrder[0]);
+    $("active").html("<td>o</td><td>o</td>");
     
-    this.buildSecond();
+    var player = this.turnOrder[0];
+    var that = this;
+    
+    $("#game-board td").on('click',function() {
+        $("#game-board td").removeClass('highlight');
+        $(this).addClass('highlight');
+        var space = $(this).html();
+        var options = that.board.getOptions(space,player);
+        
+        $('#primary,#secondary').off();
+        $('#primary').html('<th>space:</th><td>' + space + '</td><th>action:</th><td>' + options.text + '</td>');
+        $('#primary').on('click',function() {
+            options['function']();
+            that.buildHelper(space,options.text,options['two turn']);
+        });
+        
+        $('#secondary').html('<th>player:</th><td>' + player + '</td>');
+        
+        if(options.alternate){
+            $('#secondary').append('<th>secondary action:</th><td>' + options.alternate + '</td>');
+            $('#secondary').on('click',function() {
+                options['alternate function']();
+                that.buildHelper(space,options.text,options['two turn']);
+            });
+        }
+    });
 };
 
 TurnController.prototype.buildSecond = function() {
-    if(this.cards.trips === 0 && this.cards.cardsInPlay.length > 9){
-        this.cards.trips = 1;
-    }
+    $("active").html("<td>x</td><td>o</td>")
+    var player = this.turnOrder[0];
+    var that = this;
     
-    $('#turns').on('click', ()=> {
-        $('#turns').off('click');
-        this.populateCity();
+    $("#game-board td").on('click',function() {
+        $("#game-board td").removeClass('highlight')
+        $(this).addClass('highlight');
+        var space = $(this).html();
+        var options = that.board.getOptions(space,player);
+        
+        $('#primary,#secondary').off();
+        
+        if(options['two turn']) {
+            $('#primary').html('<th>This move is illegal</th>');
+            $('#secondary').html('<td>Try another square</td>');
+        } else {
+            $('#primary').html('<th>space:</th><td>' + space + '</td><th>action:</th><td>' + options.text + '</td>');
+            $('#primary').on('click',function() {
+                options['function']();
+                that.buildHelper(space,options.text,true);
+            });
+            
+            $('#secondary').html('<th>player:</th><td>' + player + '</td>');
+            
+            if(options.alternate){
+                $('#secondary').append('<th>secondary action:</th><td>' + options.alternate + '</td>');
+                $('#secondary').on('click',function() {
+                    options['alternate function']();
+                    that.buildHelper(space,options.text,true);
+                });
+            }
+        }
     });
 };
