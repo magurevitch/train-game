@@ -33,6 +33,18 @@ Array.prototype.shuffle = function () {
   }
 };
 
+Array.prototype.chunk = function(size) {
+    var chunks = [];
+    while (this.length) {
+        chunks.push(this.splice(0, size));
+    }
+    return chunks;
+};
+
+Array.prototype.transpose = function () {
+    return this[0].map((column, i) => this.map(row => row[i]));
+};
+
 function range(limit,fill) {
     var array = [];
     for(var i = 0; i < limit; i++){
@@ -42,5 +54,5 @@ function range(limit,fill) {
 }
 
 $(document).ready(function(){
-    var turnController = new TurnController(10,10,['red','blue'],5,5);
+    var turnController = new TurnController(2,6,3,4,['red'],5,5);
 });

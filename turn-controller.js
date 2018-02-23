@@ -1,10 +1,16 @@
-function TurnController(width,height,players,numCards,closeDist) {
-    this.board = new Board(width,height,players);
-    this.cards = new Cards(width*height,numCards);
+function TurnController(sectionRows,rowsPerSection,sectionColumns,columnsPerSection,players,numCards,closeDist) {
+    this.board = new Board(sectionColumns*columnsPerSection,sectionRows*rowsPerSection,players);
+    this.sectionCards = new Cards(sectionRows*sectionColumns,numCards);
+    this.rowCards = new Cards(rowsPerSection,numCards);
+    this.columnCards = new Cards(columnsPerSection,numCards);
+    this.sectionRows = sectionRows;
+    this.rowsPerSection = rowsPerSection;
+    this.sectionColumns = sectionColumns;
+    this.columnsPerSection = columnsPerSection;
+    
     this.turnOrder = players;
-    this.actions = 2;
-    this.scores = {};
     this.closeDist = closeDist;
+    this.scores = {};
     players.forEach(player => this.scores[player] = 0);
     this.populateGame();
 }
@@ -13,12 +19,20 @@ TurnController.prototype.populateGame = function(){
     $('#turns td').attr('colspan',this.turnOrder.length);
     this.updateTurnOrder();
     
-    var width = range(this.board.width);
-    var height = range(this.board.height);
-    $('#game-board').append('<tr><th></th><th>' + width.join('</th><th>') + '</th></tr>');
-    height.forEach(function(j){
-        $('#game-board').append('<tr><th>' + j + width.map(function(i){return '<td id=' + (j*width.length + i) + '>' + (j*width.length + i) + '</td>';}).join('') + '</th></tr>');
-    });
+    var fullNumber = this.sectionColumns*this.columnsPerSection*this.sectionRows*this.rowsPerSection;
+    var rowSize = this.sectionColumns*this.columnsPerSection;
+    var chunked = range(fullNumber).chunk(rowSize).map(x => x.chunk(this.columnsPerSection)).transpose().map(x => x.chunk(this.rowsPerSection));
+    var html = chunked.map(
+        (w,a) => '<table>' + w.map(
+            (x,b) => '<tbody>' + x.map(
+                (y,c) => '<tr>' + y.map(
+                    (z,d) => '<td id=' + z + ' class="section-' + (a+b*this.sectionColumns) + ' row-' + c + ' column-' + d +'">' + z + '</td>'
+                ).join("") + '</tr>'
+            ).join("") + '</tbody>'
+        ).join("") + '</table>'
+    ).join("");
+    
+    $('#game-board').html(html);
     this.populateCity();
 };
 
@@ -42,8 +56,8 @@ TurnController.prototype.renderBoard = function() {
     });
 };
 
-TurnController.prototype.getRandom = function() {
-    return Math.floor(Math.random() * this.cards.cardsLeft.length);
+TurnController.prototype.getRandom = function(length) {
+    return Math.floor(Math.random() * length);
 };
 
 TurnController.prototype.populateCity = function() {
@@ -54,47 +68,54 @@ TurnController.prototype.populateCity = function() {
     $('#build').removeClass(last);
     $('#add-in').addClass(this.turnOrder[0]);
     
-    var card = this.getRandom();
-    $('#active').html(card);
-    this.cards.addCard(card);
+    //#active
+    [this.rowCards,this.columnCards,this.sectionCards].forEach(x => {
+        var card = this.getRandom(x.cardsLeft.length);
+        x.addCard(card);
+    });
     
     //go on to next phase
     $('#turns').on('click', () => {
         $('#turns').off('click');
         $('#add-in').removeClass(this.turnOrder[0]);
         $('#trips').addClass(this.turnOrder[0]);
-        this.takeTrip(this.cards.trips);
+        var numberOfTrips = Math.min(this.rowCards.trips,this.columnCards.trips,this.sectionCards.trips);
+        this.takeTrip(numberOfTrips);
     });
 };
 
 TurnController.prototype.intensify = function(times,steps,end) {
+    var doNext = () => typeof times === 'function'? times() : this.takeTrip(times-1);
+    
     if(steps < this.closeDist) {
         $('#secondary').html('<th>choose who to intensify:</th>');
-        var neighbors = this.board.getNeighbors(end).filter(x => this.cards.cardsLeft[x] > 0);
-        neighbors.forEach(neighbor => {
-            $('#' + neighbor).addClass('highlight');
-            $('#secondary').append('<td>' + neighbor + '</td>');
-        });
-        
-        var that = this;
-        $('#secondary td,td.highlight').on('click',function(){
-            var spot = parseInt($(this).html());
-            that.cards.addCard(spot);
-            $('#secondary').html("");
-            $('td').off('click');
-            $('td').removeClass('highlight');
-            $('#active').html(spot);
-            if(typeof times === 'function'){
-                times();
-            } else {
-                that.takeTrip(times-1);
-            }
-        });
-    } else if(typeof times === 'function'){
-        times();
+        $('#secondary').append(this.chooseIntensifier(doNext,"row",end[1],this.rowCards));
+        $('#secondary').append(this.chooseIntensifier(doNext,"column",end[2],this.columnCards));
+        $('#secondary').append(this.chooseIntensifier(doNext,"section",end[3],this.sectionCards));
     } else {
-        this.takeTrip(times-1);
+        doNext();
     }
+};
+
+TurnController.prototype.chooseIntensifier = function(doNext,name,value,cardPile) {
+    return $('<td>' + name + ': ' + value + '</td>').hover(
+        function(){$('.'+name+'-'+value).addClass('highlight');$(this).addClass('highlight');},
+        function(){$('.'+name+'-'+value).removeClass('highlight');$(this).removeClass('highlight');}
+    ).on('click',function(){
+        cardPile.addCard(value);
+        $('td').removeClass('highlight');
+        $('#secondary').html("");
+        //$('#active').html(spot);
+        doNext();
+    });
+};
+
+TurnController.prototype.chooseTiles = function() {
+    var row = this.rowCards.chooseCard();
+    var column = this.columnCards.chooseCard();
+    var sector = this.sectionCards.chooseCard();
+    var tile = parseInt($('.row-'+row+'.column-'+column+'.section-'+sector).attr('id'));
+    return [tile, row, column, sector];
 };
 
 TurnController.prototype.takeTrip = function(times) {
@@ -102,12 +123,12 @@ TurnController.prototype.takeTrip = function(times) {
         $('#primary').html('');
        this.buildFirst();
     } else {
-        var start = this.cards.chooseCard();
-        var end = this.cards.chooseCard();
-        $('#active').html(start + ' -> ' + end);
-        $('#flips').html(this.cards.trips);
+        var start = this.chooseTiles();
+        var end = this.chooseTiles();
+        $('#active').html(start[0] + ' -> ' + end[0]);
+        //reörganize #flips
         
-        var winners = this.board.bestPath(start,end);
+        var winners = this.board.bestPath(start[0],end[0]);
         
         $('#primary').html('<th>distance:</th><td>' + winners.steps + '</td>');
     
@@ -139,11 +160,12 @@ TurnController.prototype.scoreWinners = function(winners) {
 TurnController.prototype.buildHelper = function(space,optionName,popCondition) {
     this.renderBoard();
     $('#primary,#secondary').off();
-    this.cards.depopulate(space);
     $('#primary,#secondary').html("");
     $('#game-board td').off();
     $('#game-board td').removeClass('highlight');
     var nextTurn = ()=>(popCondition ? this.populateCity() : this.buildSecond());
+    
+    //this.cards.depopulate(space);
     
     if(optionName === 'build station'){
         this.takeTrip(nextTurn);

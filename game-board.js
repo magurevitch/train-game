@@ -131,8 +131,8 @@ Board.prototype.getOptions = function(space,color) {
     return {'text':'build track','function':()=>this.setColor(space,color,true)};
 };
 
-function Cards(numberOfTiles,numCards) {
-    this.cardsLeft = range(numberOfTiles,numCards);
+function Cards(numberOfCards,numCards) {
+    this.cardsLeft = range(numberOfCards,numCards);
     this.cardsInPlay = [];
     this.cardsIndex = -1;
     this.trips = 0;
