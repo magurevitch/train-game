@@ -69,3 +69,19 @@
 #cards {
     float: right;
 }
+
+#game-board table {
+    display: inline-block;
+}
+
+#game-board tbody {
+    box-shadow: 0 0 0 1px black;
+}
+
+#game-board td {
+    box-shadow: 0 0 0 1px gray;
+}
+
+#game-board td.highlight {
+    box-shadow: 0 0 0 2px red;
+}
