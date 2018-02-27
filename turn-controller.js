@@ -17,6 +17,7 @@ function TurnController(sectionRows,rowsPerSection,sectionColumns,columnsPerSect
 }
 
 TurnController.prototype.populateGame = function(){
+    $('#secondary').html('');
     $('#turns td').attr('colspan',this.turnOrder.length);
     this.updateTurnOrder();
     
@@ -251,7 +252,7 @@ TurnController.prototype.buildFirst = function() {
             $('#secondary').append('<th>secondary action:</th><td>' + options.alternate + '</td>');
             $('#secondary').on('click',function() {
                 options['alternate function']();
-                that.buildHelper(space,options.text,options['two turn']);
+                that.buildHelper(space,options.alternate,options['two turn']);
             });
         }
     });
@@ -288,7 +289,7 @@ TurnController.prototype.buildSecond = function() {
                 $('#secondary').append('<th>secondary action:</th><td>' + options.alternate + '</td>');
                 $('#secondary').on('click',function() {
                     options['alternate function']();
-                    that.buildHelper(space,options.text,true);
+                    that.buildHelper(space,options.alternate,true);
                 });
             }
         }
