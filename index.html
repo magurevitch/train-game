@@ -7,7 +7,7 @@
         <table id="turns">
             <tr><td id="add-in">Populate the city</td></tr>
             <tr><td id="trips">Do trips</td></tr>
-            <tr><td id="build">Build</td></tr>
+            <tr><td id="build">Build <div id="light" class="circle"></div> <div class="circle"></div></td></tr>
             <tr id="turn-order"></tr>
             <tr id="scores"></tr>
         </table>
@@ -17,10 +17,14 @@
             <tr id="secondary"></tr>
         </table>
         <table id="cards">
-            <tr><td id="discard" colspan=2>Dis</td></tr>
-            <tr><td id="remaining" colspan=2>Rem</td></tr>
-            <tr><td id="flips">0</td><td>Flips</td></tr>
-            <tr><td >Active:</td><td id="active"></td></tr>
+            <tr><th></th><th>Draw</th><th>Discard</th><th>Number of flips</th></tr>
+            <tr id="section"></tr>
+            <tr id="row"></tr>
+            <tr id="column"></tr>
+        </table>
+        <table id="population">
+            <tr><td></td><td id="column-pop"></td></tr>
+            <tr><td id="row-pop"></td><td id="section-pop"></td></tr>
         </table>
 
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
