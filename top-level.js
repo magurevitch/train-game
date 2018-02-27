@@ -54,5 +54,5 @@ function range(limit,fill) {
 }
 
 $(document).ready(function(){
-    var turnController = new TurnController(2,6,3,4,['red'],5,5);
+    var turnController = new TurnController(2,6,3,4,['red','blue'],5,5);
 });

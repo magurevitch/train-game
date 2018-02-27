@@ -131,10 +131,11 @@ Board.prototype.getOptions = function(space,color) {
     return {'text':'build track','function':()=>this.setColor(space,color,true)};
 };
 
-function Cards(numberOfCards,numCards) {
+function Cards(numberOfCards,numCards,type) {
     this.cardsLeft = range(numberOfCards,numCards);
     this.cardsInPlay = [];
-    this.cardsIndex = -1;
+    this.type = type;
+    this.cardsIndex = 0;
     this.trips = 0;
 }
 

@@ -1,9 +1,17 @@
+.circle{
+    background-color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display:inline-block;
+}
+
 .red {
     background-color: #FF2222;
 }
 
 .green {
-    background-color: #22DD22;
+    background-color: #00AA00;
 }
 
 .blue {
@@ -11,62 +19,83 @@
 }
 
 .red.green {
-    background-color: #BB9922;
+    background-color: #DD8800;
 }
 
 .red.blue {
-    background-color: #BB44BB;
+    background-color: #CC00CC;
 }
 
 .green.blue {
-    background-color: #4499BB;
+    background-color: #0077AA;
 }
 
 .red.green.blue {
-    background-color: #886688;
+    background-color: #996633;
 }
 
 .highlight {
-    background-color: #444444;
+    background-color: #FFFF00;
+}
+
+.highlight.light {
+    background-color: #FFFF99;
 }
 
 .highlight.red {
-    background-color: #DD0000;
+    background-color: #FF7777;
 }
 
 .highlight.green {
-    background-color: #00AA00;
+    background-color: #00FF00;
 }
 
 .highlight.blue {
-    background-color: #2222DD;
+    background-color: #2299FF;
 }
 
 .highlight.red.green {
-    background-color: #996600;
+    background-color: #FFAA44;
 }
 
 .highlight.red.blue {
-    background-color: #990099;
+    background-color: #FF44FF;
 }
 
 .highlight.green.blue {
-    background-color: #006699;
+    background-color: #00FFFF;
 }
 
 .highlight.red.green.blue {
-    background-color: #666666;
+    background-color: #BB9966;
 }
 
-.station {
-    color: #FFFFFF;
+#game-board div {
+    height: 90%;
+    width: 90%;
+    padding: 5%;
+    margin-left: auto;
+    margin-right: auto;
+    visibility: hidden;
+}
+
+#game-board div.station {
+    background-color: black;
+    border-radius: 50%;
+    visibility: visible;
+}
+
+#game-board div.station div{
+    background-color: white;
+    border-radius: 50%;
+    visibility: visible;
 }
 
 #turns {
     float: left;
 }
 
-#cards {
+#cards,#population {
     float: right;
 }
 
@@ -79,9 +108,11 @@
 }
 
 #game-board td {
+    height: 25px;
+    width: 25px;
     box-shadow: 0 0 0 1px gray;
 }
 
 #game-board td.highlight {
-    box-shadow: 0 0 0 2px red;
+    box-shadow: 0 0 0 2px #DDDD00;
 }
