@@ -61,7 +61,7 @@ $(document).ready(function(){
     $('#primary').append('<td class="green"><input id="has-green" type="checkbox"/></td>');
     $('#secondary').append('<button>Populate game</button>');
     $('#secondary').on('click',function(){
-        var players = ['red','blue','green'].filter(x=>$('#has-' + x + ':checked').val());
+        var players = ['red','blue','green'].filter(x=>$(`#has-${x}:checked`).val());
         players.unshift(players.pop());
         var turnController = new TurnController(
             $('#sections-up-and-down').val(),
@@ -75,13 +75,17 @@ $(document).ready(function(){
     });
 });
 
+function numberInput(id,value) {
+    return `<input id="${id}" type="number" min=1 value="${value}"/>`;
+}
+
 var welcomeScreen = '<table>' +
     '<tr><td>sections up and down</td><td colspan="3">sections across</td></tr>' +
-    '<tr><td rowspan="5"><input id="sections-up-and-down" type="number" value="4"/></td>' + 
-    '<td colspan="3"><input id="sections-across" type="number" value="4"/></td></tr>' +
+    `<tr><td rowspan="5">${numberInput('sections-up-and-down',4)}</td>` + 
+    `<td colspan="3">${numberInput('sections-across',4)}</td></tr>` +
     '<tr><td>rows per section</td><td colspan="2">columns per section</td></tr>' +
-    '<tr><td rowspan="3"><input id="rows-per-section" type="number" value="4"/></td>' + 
-    '<td colspan=2><input id="columns-per-section" type="number" value="4"/></td></tr>' +
+    `<tr><td rowspan="3">${numberInput('rows-per-section',4)}</td>` + 
+    `<td colspan=2>${numberInput('columns-per-section',4)}</td></tr>` +
     '<tr><td>deck size limit</td><td>closeness distance</td></tr>' +
-    '<tr><td><input id="num-cards" type="number" value="4"/></td><td><input id="close-dist" type="number" value="4"/></td></tr>' +
+    `<tr><td>${numberInput('num-cards',12)}</td><td>${numberInput('close-dist',6)}</td></tr>` +
     '</table>';
