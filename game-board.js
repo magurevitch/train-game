@@ -133,27 +133,40 @@ Board.prototype.getOptions = function(space,color) {
 
 function Cards(numberOfCards,numCards,type) {
     this.cardsLeft = range(numberOfCards,numCards);
+    this.numCards = numCards;
     this.cardsInPlay = [];
     this.type = type;
     this.cardsIndex = 0;
     this.trips = 0;
+    this.queue = [];
 }
+
+Cards.prototype.leftInDrawPile = function() {
+    return this.cardsInPlay.length - this.cardsIndex;
+};
+
+Cards.prototype.fillQueue = function() {
+    this.drawCards(this.trips);
+};
+
+Cards.prototype.drawCards = function(limit) {
+    if(this.cardsIndex < 1 && limit) {
+        this.cardsInPlay.shuffle();
+        this.cardsIndex = this.cardsInPlay.length;
+        this.trips++;
+    }
+    
+    while(this.queue.length < limit && this.cardsIndex != 0) {
+        this.cardsIndex--;
+        this.queue.push(this.cardsInPlay[this.cardsIndex]);
+    }
+};
 
 Cards.prototype.addCard = function(index) {
     if(this.cardsLeft[index] > 0) {
         this.cardsLeft[index]--;
         this.cardsInPlay.push(index);
     }
-};
-
-Cards.prototype.chooseCard = function() {
-    if(this.cardsIndex < 1) {
-        this.cardsInPlay.shuffle();
-        this.cardsIndex = this.cardsInPlay.length;
-        this.trips++;
-    }
-    this.cardsIndex--;
-    return this.cardsInPlay[this.cardsIndex];
 };
 
 //This uses the rule that if you have it in the cards left to draw, you discard until you find it
