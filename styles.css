@@ -34,6 +34,38 @@
     background-color: #996633;
 }
 
+.hazard {
+    background-color: #999999;
+}
+
+.hazard.red {
+    background-color: #CC0000;
+}
+
+.hazard.green {
+    background-color: #007700;
+}
+
+.hazard.blue {
+    background-color: #0000CC;
+}
+
+.hazard.red.green {
+    background-color: #BB8800;
+}
+
+.hazard.red.blue {
+    background-color: #9900AA;
+}
+
+.hazard.green.blue {
+    background-color: #006688;
+}
+
+.hazard.red.green.blue {
+    background-color: #775533;
+}
+
 .highlight {
     background-color: #FFFF00;
 }
@@ -107,7 +139,7 @@
     box-shadow: 0 0 0 1px black;
 }
 
-#game-board td {
+#game-board th, #game-board td {
     height: 25px;
     width: 25px;
     box-shadow: 0 0 0 1px gray;
