@@ -17,34 +17,70 @@ function TurnController(sectionRows,rowsPerSection,sectionColumns,columnsPerSect
 }
 
 TurnController.prototype.populateGame = function(){
-    $('#secondary').html('');
+    $('#secondary').html('').off('click');
     $('#turns td').attr('colspan',this.turnOrder.length);
     this.updateTurnOrder();
+    
+    var rowHeaders = '<table><tbody/>' + range(this.sectionRows).map(x => '<tbody>'
+        + range(this.rowsPerSection).map(y =>`<tr><th class="sr-${x}">${y}</th></tr>`).join('') +
+    '</tbody>').join('') + '</table>';
     
     var fullNumber = this.sectionColumns*this.columnsPerSection*this.sectionRows*this.rowsPerSection;
     var rowSize = this.sectionColumns*this.columnsPerSection;
     var chunked = range(fullNumber).chunk(rowSize).map(x => x.chunk(this.columnsPerSection)).transpose().map(x => x.chunk(this.rowsPerSection));
     var html = chunked.map(
-        (w,a) => '<table>' + w.map(
-            (x,b) => '<tbody>' + x.map(
+        (w,a) => '<table></th>' + range(this.columnsPerSection).map(x => `<th>${x}</th>`).join('') + '</tr>' + w.map(
+            (x,b) => `<tbody class="sr-${b}">` + x.map(
                 (y,c) => '<tr>' + y.map(
                     (z,d) => `<td id=${z} class="section-${a+b*this.sectionColumns} row-${c} column-${d}"><div><div></div></div></td>`
                 ).join("") + '</tr>'
             ).join("") + '</tbody>'
         ).join("") + '</table>'
     ).join("");
+    console.log(html)
     
-    $('#game-board').html(html);
+    $('#game-board').html(rowHeaders + html);
     
-$('#column-pop').html(`<table><tr><td colspan=${this.columnsPerSection}>Column population</td></tr><tr>${range(this.columnsPerSection).map(column => '<td id="column-' + column + '"></td>').join('')}</tr><table>`);
-$('#row-pop').html(`<table><tr><td rowspan=${this.rowsPerSection}>Row population</td><td id="row-${range(this.rowsPerSection).join('"></td></tr><tr><td id="row-')}"></td></tr><table>`);
+    html = range(this.sectionRows).map(row => 
+        '<tr>' + range(this.sectionColumns).map(column => `<td id="section-${this.sectionColumns*row+column}">${this.sectionColumns*row+column}</td>`).join('') + '</tr>'
+    ).join('');
+    $('#section-pop').html(`<table><tr><td colspan="${this.sectionColumns}">Choose section</td></tr>${html}</table>`);
+    
+    this.chooseHazards();
+};
+
+TurnController.prototype.chooseHazards = function() {
+    var spaces = this.board.spaces;
+    function toggleHazard(space) {
+        space.toggleClass('hazard');
+        spaces[space.attr('id')].hazard = !spaces[space.attr('id')].hazard;
+    }
+    
+    $('#game-board td').on('click', function() {toggleHazard($(this))});
+    
+    $('#game-board th').on('click',function() {
+        $(this).parents('table').find('.column-' + $(this).html()).each((i,x) => toggleHazard($(x)));
+        $('#game-board').find(`.${$(this).attr('class')} .row-${$(this).html()}`).each((i,x) => toggleHazard($(x)));
+    });
+    
+    $('#section-pop td').on('click', function(){
+        $('#game-board').find(`.${$(this).attr('id')}`).each((i,x) => toggleHazard($(x)));
+    });
+    
+    $('#primary').html('Click a space to toggle if it is a hazard. The row/column marker toggles the whole row. The section bit in the corner toggles a section.');
     html = range(this.sectionRows).map(row => 
         '<tr>' + range(this.sectionColumns).map(column => `<td id="section-${this.sectionColumns*row+column}"></td>`).join('') + '</tr>'
     ).join('');
-    $('#section-pop').html(`<table><tr><td colspan="${this.sectionColumns}">Section population</td></tr>${html}</table>`);
-    
-    this.populateCity();
-};
+    $('#secondary').html('<th>Start game</th>').on('click',() => {
+        $('th,#secondary').off('click');
+        
+        $('#column-pop').html(`<table><tr><td colspan=${this.columnsPerSection}>Column population</td></tr><tr>${range(this.columnsPerSection).map(column => '<td id="column-' + column + '"></td>').join('')}</tr><table>`);
+        $('#row-pop').html(`<table><tr><td rowspan=${this.rowsPerSection}>Row population</td><td id="row-${range(this.rowsPerSection).join('"></td></tr><tr><td id="row-')}"></td></tr><table>`);
+        $('#section-pop td').first().html('Section population');
+        
+        this.populateCity()
+    });
+}
 
 TurnController.prototype.updateTurnOrder = function() {
     $('#turn-order').html("");
@@ -52,7 +88,7 @@ TurnController.prototype.updateTurnOrder = function() {
     var scores = this.scores;
     this.turnOrder.forEach(function(player){
         $('#turn-order').append(`<td class=${player}>${player}</td>`);
-        $('#scores').append(`<td class=${player}>'${scores[player]}</td>`);
+        $('#scores').append(`<td class=${player}>${scores[player]}</td>`);
     });
 };
 
@@ -96,10 +132,10 @@ TurnController.prototype.populateCity = function() {
     this.updateTurnOrder();
     
     $('#build,#light').removeClass(last);
-    $('td').removeClass('highlight');
+    $('td').removeClass('highlight').off('click');
     $('#add-in').addClass(this.turnOrder[0]);
     
-    $('#primary').html('');
+    $('#primary,#secondary').html('');
     
     [this.sectionCards,this.rowCards,this.columnCards].forEach(x => {
         var card = this.getRandom(x.cardsLeft.length);

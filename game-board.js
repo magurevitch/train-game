@@ -82,35 +82,39 @@ Board.prototype.bestPath = function(start, end) {
     };
     
     var helper = (current,step) => {
-        var winners = current.filter(x => x.space === end && ((!x['current mode']) || this.spaces[x.space].station));
+        var winners = current.filter(x => x.space === end && x['current mode'] !== 'hazard');
         if (winners.length > 0) {
             var modes = winners.map(x => x.modes).getShortests();
             return {'steps': step,'modes':modes};
         } else {
             temp = [];
             current.forEach(x => {
-                if(x['current mode'] === false || this.spaces[x.space].station) {
-                    visited.push(x.space);
-                    getAdditions(this.getNeighbors(x.space),x.modes,false);
-                }
+                if(x['current mode'] === 'hazard') {
+                    getAdditions([x.space],x.modes,false);
+                } else {
+                    if (x['current mode'] === false ||  this.spaces[x.space].station) {
+                        visited.push(x.space);
+                        var mode = this.spaces[x.space].hazard ? 'hazard' : false;
+                        getAdditions(this.getNeighbors(x.space),x.modes,mode);
+                    }
                 
-                if(x['current mode']) {
-                    getAdditions(this.getNextStops(x.space,x['current mode']),x.modes,x['current mode']);
-                }
+                    if(x['current mode']) {
+                        getAdditions(this.getNextStops(x.space,x['current mode']),x.modes,x['current mode']);
+                    }
                 
-                if(this.spaces[x.space].station){
-                    var stations = this.players.filter(y => y !== x['current mode'] && this.spaces[x.space][y]);
-                    stations.forEach(y => {
-                        next = {'space':x.space, 'modes':x.modes.concatIfAbsent(y) , 'current mode':y};
-                        add(next,temp);
-                    });
+                    if(this.spaces[x.space].station){
+                        var stations = this.players.filter(y => y !== x['current mode'] && this.spaces[x.space][y]);
+                        stations.forEach(y => {
+                            next = {'space':x.space, 'modes':x.modes.concatIfAbsent(y) , 'current mode':y};
+                            add(next,temp);
+                        });
+                    }
                 }
             });
             return helper(temp,step + 1);
         }
     };
-    
-    return helper([{'space': start, 'modes':[], 'current mode':false}],0);
+    return helper([{'space': start, 'modes':[], 'current mode': false}],0);
 };
 
 Board.prototype.getOptions = function(space,color) {
@@ -127,6 +131,9 @@ Board.prototype.getOptions = function(space,color) {
     }
     if(this.players.some(x => this.spaces[space][x])) {
         return {'text':'build track underneath','function':()=>this.setColor(space,color,true),'two turn':true};
+    }
+    if(this.spaces[space].hazard) {
+        return {'text':'build track in rough terrain','function':()=>this.setColor(space,color,true),'two turn':true};
     }
     return {'text':'build track','function':()=>this.setColor(space,color,true)};
 };
