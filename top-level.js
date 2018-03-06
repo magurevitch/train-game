@@ -21,7 +21,7 @@ Array.prototype.getShortests = function() {
 
 Array.prototype.flatten = function() {
     return [].concat.apply([], this);
-}
+};
 
 //taken from https://bost.ocks.org/mike/shuffle/
 //This is the Fisher-Yates Shuffle

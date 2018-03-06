@@ -120,22 +120,23 @@ Board.prototype.bestPath = function(start, end) {
 Board.prototype.getOptions = function(space,color) {
     if(this.spaces[space][color]) {
         if(this.spaces[space].station) {
-            return {'text':'remove station','function':()=>this.setStation(space,false)};
+            return {'text':'remove station','function':()=>this.setStation(space,false),'turns':1};
         }
         return {
             'text':'build station',
             'function':()=>this.setStation(space,true),
             'alternate':'remove tracks',
             'alternate function':()=>this.setColor(space,color,false),
+            'turns':1
         };
     }
     if(this.players.some(x => this.spaces[space][x])) {
-        return {'text':'build track underneath','function':()=>this.setColor(space,color,true),'two turn':true};
+        return {'text':'build track underneath','function':()=>this.setColor(space,color,true),'turns':2};
     }
     if(this.spaces[space].hazard) {
-        return {'text':'build track in rough terrain','function':()=>this.setColor(space,color,true),'two turn':true};
+        return {'text':'build track in rough terrain','function':()=>this.setColor(space,color,true),'turns':2};
     }
-    return {'text':'build track','function':()=>this.setColor(space,color,true)};
+    return {'text':'build track','function':()=>this.setColor(space,color,true),'turns':1};
 };
 
 function Cards(numberOfCards,numCards,type) {
@@ -163,7 +164,7 @@ Cards.prototype.drawCards = function(limit) {
         this.trips++;
     }
     
-    while(this.queue.length < limit && this.cardsIndex != 0) {
+    while(this.queue.length < limit && this.cardsIndex !== 0) {
         this.cardsIndex--;
         this.queue.push(this.cardsInPlay[this.cardsIndex]);
     }
