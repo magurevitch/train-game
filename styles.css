@@ -148,3 +148,7 @@
 #game-board td.highlight {
     box-shadow: 0 0 0 2px #DDDD00;
 }
+
+input {
+    width: 35px;
+}
