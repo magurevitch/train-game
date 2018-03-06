@@ -47,5 +47,6 @@ When you build a station, take an extra trip using that station as a starting po
  * Do you like the number of trips taken? Would you like it to be faster, and queue starts, but draw the destinations?
  * Would you like it to show who the winner is more clearly, or what path the trip took?
  * I am thinking about adding something if you build in a populated space. For example, any build in it depopulates the square, or is harder to build in it/
+ ^ Should you also have an option to intensify a space as a build action? Does that include taking a trip?
  * Is there any feature that you might like to see that I don't have, or haven't mentioned?
  * What can I make clearer about these rules?
