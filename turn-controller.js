@@ -37,7 +37,6 @@ TurnController.prototype.populateGame = function(){
             ).join("") + '</tbody>'
         ).join("") + '</table>'
     ).join("");
-    console.log(html)
     
     $('#game-board').html(rowHeaders + html);
     
@@ -214,7 +213,6 @@ TurnController.prototype.takeTrip = function(nextTurn) {
         $(`#${start[0]},#${end[0]}`).addClass('highlight');
         
         var winners = this.board.bestPath(start[0],end[0]);
-        
         $('#primary').append(`<th>distance:</th><td>${winners.steps}</td>`);
     
         if(winners.modes.length > 1) {
@@ -238,8 +236,10 @@ TurnController.prototype.takeTrip = function(nextTurn) {
 
 TurnController.prototype.scoreWinners = function(winners) {
     var score = (winners.length > 1) ? 1 : 2;
-    winners.forEach(x => this.scores[x] += score);
-    this.updateTurnOrder();
+    winners.forEach(x => {
+        this.scores[x] += score;
+        $('#scores .' + x).addClass('highlight').html(this.scores[x]);
+    });
 };
 
 TurnController.prototype.buildHelper = function(coordinates,optionName,popCondition) {
