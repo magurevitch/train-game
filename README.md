@@ -1,6 +1,6 @@
-#The Subway Game
+# The Subway Game
 ---
-##Flavor Text
+## Flavor Text
 The year is 1898. The City of New York just consolidated, and needed to link the boroughs. Boston had just won the subway wars, opening the Tremont Street Subway the year before, and New York needed to catch up fast.
 
 To quickly get rapid transit, the City gave the rights to two companies, the IRT (Interborough Rapid Transit) and BRT (Brooklyn Rapid Transit) to build competing subway systems.
@@ -46,7 +46,9 @@ When you build a station, take an extra trip using that station as a starting po
  * If you have played around with the settings, are there any you really like? A certain number of squares, a certain configuration of hazard spaces?
  * Do you like the number of trips taken? Would you like it to be faster, and queue starts, but draw the destinations?
  * Would you like it to show who the winner is more clearly, or what path the trip took?
- * I am thinking about adding something if you build in a populated space. For example, any build in it depopulates the square, or is harder to build in it/
- ^ Should you also have an option to intensify a space as a build action? Does that include taking a trip?
+ * I am thinking about adding something if you build in a populated space. For example, any build in it depopulates the square, or is harder to build in it?
+ * Should you also have an option to intensify a space as a build action? Does that include taking a trip?
+ * To slow down adding random squares, do you only choose one of the three piles?
+ * Should there be a feature to make a stop "local" - that is, you can use a build turn to mean that it can be "skipped"?
  * Is there any feature that you might like to see that I don't have, or haven't mentioned?
  * What can I make clearer about these rules?
