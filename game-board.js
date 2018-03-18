@@ -1,8 +1,8 @@
-function Board(width, height, players) {
-    this.height = height;
+function Board(width, height, players, difficultBuild) {
     this.width = width;
     this.players = players;
-    this.spaces = range(this.height*this.width).map(x => {return {};});
+    this.difficultBuild = difficultBuild;
+    this.spaces = range(height*width).map(x => {return {};});
 }
 
 Board.prototype.getNeighbors = function(index) {
@@ -14,25 +14,28 @@ Board.prototype.getNeighbors = function(index) {
         neighbors.push(index + 1);
     }
     neighbors.push(index + this.width);
-    return neighbors.filter(x => x > -1 && x < this.height * this.width);
+    return neighbors.filter(x => x > -1 && x < this.spaces.length);
 };
 
-Board.prototype.getNextStops = function(space, color) {
+Board.prototype.getNextStops = function(space, color, isLocal) {
     var stations = [];
     
-    var getNextSpaces = (space, previous, color) => {
+    var getNextSpaces = (space, color, visited, stationFunction) => {
         this.getNeighbors(space).forEach(neighbor => {
-            if(neighbor !== previous && this.spaces[neighbor][color]) {
-                if(this.spaces[neighbor].station || this.isJunction(neighbor,color)) {
-                    stations.push(neighbor);
+            if(visited.indexOf(neighbor) < 0 && this.spaces[neighbor][color]) {
+                if(stationFunction(neighbor) || this.isJunction(neighbor,color)) {
+                    stations.push({'stop':neighbor,'path':visited.concat(space)});
                 } else {
-                    getNextSpaces(neighbor, space, color);
+                    getNextSpaces(neighbor,color,visited.concat(space),stationFunction);
                 }
             }
         });
     };
     
-    getNextSpaces(space,null,color);
+    getNextSpaces(space,color,[],space=>this.spaces[space].station);
+    if(!isLocal) {
+        getNextSpaces(space,color,[],space=>this.spaces[space].station === true);
+    }
     
     return stations;
 };
@@ -45,21 +48,9 @@ Board.prototype.setStation = function(space,value) {
     this.spaces[space].station = value;
 };
 
-Board.prototype.createsJunction = function(space,color) {
-    var surrounding = this.getNeighbors(space).filter(x => this.spaces[x][color]);
-    if(surrounding.length > 2 && this.spaces[space].station) {
-        return true;
-    }
-    
-    return surrounding.some(x => {
-        var moreSurrounding = this.getNeighbors(x).filter(x => this.spaces[x][color] || x === space);
-        return moreSurrounding.length > 2 && !this.spaces[x].station;
-    });
-};
-
 Board.prototype.isJunction = function(space,color) {
     var surrounding = this.getNeighbors(space).filter(x => this.spaces[x][color]);
-    return surrounding.length > 2 && !this.spaces[space].station;
+    return surrounding.length > 2;
 };
 
 Board.prototype.bestPath = function(start, end) {
@@ -73,39 +64,40 @@ Board.prototype.bestPath = function(start, end) {
         }
     };
     
-    var getAdditions = function(nextSpots,modes,mode) {
-        var nexts = nextSpots.filter(y => visited.indexOf(y) < 0);
-        nexts.forEach(y => {
-            next = {'space':y, 'modes':modes, 'current mode':mode};
-            add(next,temp);
+    var getAdditions = function(nextSpots,modes,mode,squares) {
+        nextSpots.map(x => typeof x === 'number' ? {'stop':x,'path':[]} : x)
+            .filter(y => visited.indexOf(y.stop) < 0).forEach(y => {
+                next = {'space':y.stop, 'modes':modes, 'current mode':mode,'squares':squares.concat(y.path).concat(y.stop)};
+                add(next,temp);
         });
     };
     
     var helper = (current,step) => {
         var winners = current.filter(x => x.space === end && x['current mode'] !== 'hazard');
         if (winners.length > 0) {
-            var modes = winners.map(x => x.modes).getShortests();
-            return {'steps': step,'modes':modes};
+            var modes = getShortestPath(winners);
+            return {'steps': step,'modes':modes.map(x=>x.modes),'path':modes.map(x=>x.squares).flatten()};
         } else {
             temp = [];
             current.forEach(x => {
                 if(x['current mode'] === 'hazard') {
-                    getAdditions([x.space],x.modes,false);
+                    getAdditions([x.space],x.modes,false,x.squares);
                 } else {
                     if (x['current mode'] === false ||  this.spaces[x.space].station) {
                         visited.push(x.space);
                         var mode = this.spaces[x.space].hazard ? 'hazard' : false;
-                        getAdditions(this.getNeighbors(x.space),x.modes,mode);
+                        getAdditions(this.getNeighbors(x.space),x.modes,mode,x.squares);
                     }
                 
                     if(x['current mode']) {
-                        getAdditions(this.getNextStops(x.space,x['current mode']),x.modes,x['current mode']);
+                        var nextStops = this.getNextStops(x.space,x['current mode'],this.spaces[x.space].station ==='local');
+                        getAdditions(nextStops,x.modes,x['current mode'],x.squares);
                     }
                 
                     if(this.spaces[x.space].station){
                         var stations = this.players.filter(y => y !== x['current mode'] && this.spaces[x.space][y]);
                         stations.forEach(y => {
-                            next = {'space':x.space, 'modes':x.modes.concatIfAbsent(y) , 'current mode':y};
+                            next = {'space':x.space, 'modes':x.modes.concatIfAbsent(y) , 'current mode':y, 'squares':x.squares};
                             add(next,temp);
                         });
                     }
@@ -114,29 +106,31 @@ Board.prototype.bestPath = function(start, end) {
             return helper(temp,step + 1);
         }
     };
-    return helper([{'space': start, 'modes':[], 'current mode': false}],0);
+    return helper([{'space': start, 'modes':[], 'current mode': false,'squares':[]}],0);
 };
 
 Board.prototype.getOptions = function(space,color) {
     if(this.spaces[space][color]) {
-        if(this.spaces[space].station) {
-            return {'text':'remove station','function':()=>this.setStation(space,false),'turns':1};
+        if(this.spaces[space].station === true) {
+            return [
+                {'text':'remove station','function':()=>this.setStation(space,false),'turns':1},
+                {'text':'make station local','function':()=>this.setStation(space,'local'),'turns':1}
+            ];
+        } else if(this.spaces[space].station === 'local') {
+            return [{'text':'make station regular','function':()=>this.setStation(space,true),'turns':1}];
         }
-        return {
-            'text':'build station',
-            'function':()=>this.setStation(space,true),
-            'alternate':'remove tracks',
-            'alternate function':()=>this.setColor(space,color,false),
-            'turns':1
-        };
+        return [
+            {'text':'build station','function':()=>this.setStation(space,true),'turns':1},
+            {'text':'remove tracks','function':()=>this.setColor(space,color,false),'turns':1}
+        ];
     }
     if(this.players.some(x => this.spaces[space][x])) {
-        return {'text':'build track underneath','function':()=>this.setColor(space,color,true),'turns':2};
+        return [{'text':'build track underneath','function':()=>this.setColor(space,color,true),'turns':this.difficultBuild}];
     }
     if(this.spaces[space].hazard) {
-        return {'text':'build track in rough terrain','function':()=>this.setColor(space,color,true),'turns':2};
+        return [{'text':'build track in rough terrain','function':()=>this.setColor(space,color,true),'turns':this.difficultBuild}];
     }
-    return {'text':'build track','function':()=>this.setColor(space,color,true),'turns':1};
+    return [{'text':'build track','function':()=>this.setColor(space,color,true),'turns':1}];
 };
 
 function Cards(numberOfCards,numCards,type) {
@@ -186,4 +180,18 @@ Cards.prototype.depopulate = function(card) {
         }
         this.cardsInPlay.splice(index,1);
     }
+};
+
+function getShortestPath(array) {
+    var shortests = [];
+    var shortLength = 50;
+    array.forEach(function(item) {
+        if(item.modes.length < shortLength) {
+            shortests = [item];
+            shortLength = item.modes.length;
+        } else if (item.modes.length === shortLength && shortests.every(x => x.modes.join() !== item.modes.join())){
+            shortests.push(item);
+        }
+    });
+    return shortests;
 };

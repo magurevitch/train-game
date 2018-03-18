@@ -66,6 +66,10 @@
     background-color: #775533;
 }
 
+#game-board td.strong.highlight {
+    box-shadow: 0 0 0 5px #000000;
+}
+
 .highlight {
     background-color: #FFFF00;
 }
@@ -119,6 +123,12 @@
 
 #game-board div.station div{
     background-color: white;
+    border-radius: 50%;
+    visibility: visible;
+}
+
+#game-board div.local div{
+    background-color: gray;
     border-radius: 50%;
     visibility: visible;
 }
