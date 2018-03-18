@@ -1,80 +1,27 @@
-function TurnController(sectionRows,rowsPerSection,sectionColumns,columnsPerSection,players,numCards,closeDist) {
-    this.board = new Board(sectionColumns*columnsPerSection,sectionRows*rowsPerSection,players);
+function TurnController(sectionRows,rowsPerSection,sectionColumns,columnsPerSection,players,numCards,closeDist,buildTurns) {
+    this.board = new Board(sectionColumns*columnsPerSection,sectionRows*rowsPerSection,players,buildTurns);
     this.sectionCards = new Cards(sectionRows*sectionColumns,numCards,"section");
     this.rowCards = new Cards(rowsPerSection,numCards,"row");
     this.columnCards = new Cards(columnsPerSection,numCards,"column");
-    this.sectionRows = sectionRows;
-    this.rowsPerSection = rowsPerSection;
-    this.sectionColumns = sectionColumns;
-    this.columnsPerSection = columnsPerSection;
+    this.buildTurns = buildTurns;
     
     this.turnOrder = players;
     this.closeDist = closeDist;
     this.scores = {};
     players.forEach(player => this.scores[player] = 0);
     
-    this.populateGame();
+    populateGame(players,buildTurns,sectionRows,rowsPerSection,sectionColumns,columnsPerSection);
+    chooseHazards(this.board.spaces);
+    this.startGame(rowsPerSection,columnsPerSection);
 }
 
-TurnController.prototype.populateGame = function(){
-    $('#secondary').html('').off('click');
-    $('#turns td').attr('colspan',this.turnOrder.length);
+TurnController.prototype.startGame = function(rowsPerSection,columnsPerSection){
     this.updateTurnOrder();
-    
-    var rowHeaders = '<table><tbody/>' + range(this.sectionRows).map(x => '<tbody>' +
-        range(this.rowsPerSection).map(y =>`<tr><th class="sr-${x}">${y}</th></tr>`).join('') +
-    '</tbody>').join('') + '</table>';
-    
-    var fullNumber = this.sectionColumns*this.columnsPerSection*this.sectionRows*this.rowsPerSection;
-    var rowSize = this.sectionColumns*this.columnsPerSection;
-    var chunked = range(fullNumber).chunk(rowSize).map(x => x.chunk(this.columnsPerSection)).transpose().map(x => x.chunk(this.rowsPerSection));
-    var html = chunked.map(
-        (w,a) => '<table></th>' + range(this.columnsPerSection).map(x => `<th>${x}</th>`).join('') + '</tr>' + w.map(
-            (x,b) => `<tbody class="sr-${b}">` + x.map(
-                (y,c) => '<tr>' + y.map(
-                    (z,d) => `<td id=${z} class="section-${a+b*this.sectionColumns} row-${c} column-${d}"><div><div></div></div></td>`
-                ).join("") + '</tr>'
-            ).join("") + '</tbody>'
-        ).join("") + '</table>'
-    ).join("");
-    
-    $('#game-board').html(rowHeaders + html);
-    
-    html = range(this.sectionRows).map(row => 
-        '<tr>' + range(this.sectionColumns).map(column => `<td id="section-${this.sectionColumns*row+column}">${this.sectionColumns*row+column}</td>`).join('') + '</tr>'
-    ).join('');
-    $('#section-pop').html(`<table><tr><td colspan="${this.sectionColumns}">Choose section</td></tr>${html}</table>`);
-    
-    this.chooseHazards();
-};
-
-TurnController.prototype.chooseHazards = function() {
-    var spaces = this.board.spaces;
-    function toggleHazard(space) {
-        space.toggleClass('hazard');
-        spaces[space.attr('id')].hazard = !spaces[space.attr('id')].hazard;
-    }
-    
-    $('#game-board td').on('click', function() {toggleHazard($(this));});
-    
-    $('#game-board th').on('click',function() {
-        $(this).parents('table').find('.column-' + $(this).html()).each((i,x) => toggleHazard($(x)));
-        $('#game-board').find(`.${$(this).attr('class')} .row-${$(this).html()}`).each((i,x) => toggleHazard($(x)));
-    });
-    
-    $('#section-pop td').on('click', function(){
-        $('#game-board').find(`.${$(this).attr('id')}`).each((i,x) => toggleHazard($(x)));
-    });
-    
-    $('#primary').html('Click a space to toggle if it is a hazard. The row/column marker toggles the whole row. The section bit in the corner toggles a section.');
-    html = range(this.sectionRows).map(row => 
-        '<tr>' + range(this.sectionColumns).map(column => `<td id="section-${this.sectionColumns*row+column}"></td>`).join('') + '</tr>'
-    ).join('');
     $('#secondary').html('<th>Start game</th>').on('click',() => {
-        $('th,#secondary').off('click');
+        $('th,td,#secondary').off('click');
         
-        $('#column-pop').html(`<table><tr><td colspan=${this.columnsPerSection}>Column population</td></tr><tr>${range(this.columnsPerSection).map(column => '<td id="column-' + column + '"></td>').join('')}</tr><table>`);
-        $('#row-pop').html(`<table><tr><td rowspan=${this.rowsPerSection}>Row population</td><td id="row-${range(this.rowsPerSection).join('"></td></tr><tr><td id="row-')}"></td></tr><table>`);
+        $('#column-pop').html(`<table><tr><td colspan=${columnsPerSection}>Column population</td></tr><tr>${range(columnsPerSection).map(column => '<td id="column-' + column + '"></td>').join('')}</tr><table>`);
+        $('#row-pop').html(`<table><tr><td rowspan=${rowsPerSection}>Row population</td><td id="row-${range(rowsPerSection).join('"></td></tr><tr><td id="row-')}"></td></tr><table>`);
         $('#section-pop td').first().html('Section population');
         
         this.populateCity();
@@ -82,12 +29,10 @@ TurnController.prototype.chooseHazards = function() {
 };
 
 TurnController.prototype.updateTurnOrder = function() {
-    $('#turn-order').html("");
-    $('#scores').html("");
-    var scores = this.scores;
-    this.turnOrder.forEach(function(player){
+    $('#turn-order,#scores').html("");
+    this.turnOrder.forEach(player => {
         $('#turn-order').append(`<td class=${player}>${player}</td>`);
-        $('#scores').append(`<td class=${player}>${scores[player]}</td>`);
+        $('#scores').append(`<td class=${player}>${this.scores[player]}</td>`);
     });
 };
 
@@ -100,8 +45,9 @@ TurnController.prototype.renderBoard = function() {
         indices.filter(y => spaces[y][x]).map(y => $('#' + y).addClass(x));
     });
     
-    $('div').removeClass('station');
+    $('div').removeClass('local station');
     indices.filter(y => spaces[y].station).map(y => $(`#${y} div`).addClass('station'));
+    indices.filter(y => spaces[y].station === 'local').map(y => $(`#${y} div`).addClass('local'));
 };
 
 TurnController.prototype.updateCards = function () {
@@ -122,17 +68,25 @@ TurnController.prototype.getRandom = function(length) {
     return Math.floor(Math.random() * length);
 };
 
-TurnController.prototype.populateCity = function() {
-    var last = this.turnOrder.shift();
-    this.turnOrder.push(last);
-    this.updateTurnOrder();
+TurnController.prototype.takeNextTurn = function (buildsLeft) {
+    if(buildsLeft > 0) {
+        this.buildTurn(buildsLeft);
+    } else {
+        var last = this.turnOrder.shift();
+        this.turnOrder.push(last);
+        this.updateTurnOrder();
     
-    $('#build,#build div').removeClass(last);
-    $('td').removeClass('highlight').off('click');
+        $('#build,#build div').removeClass(last);
+        $('td').removeClass('highlight').off('click');
+    
+        $('#primary,#secondary').html('');
+        this.populateCity();
+    }
+};
+
+TurnController.prototype.populateCity = function() { 
     $('#add-in').addClass(this.turnOrder[0]);
-    
-    $('#primary,#secondary').html('');
-    
+
     [this.sectionCards,this.rowCards,this.columnCards].forEach(x => {
         var card = this.getRandom(x.cardsLeft.length);
         $(`.highlight.${x.type}-${card}`).addClass('second');
@@ -147,7 +101,7 @@ TurnController.prototype.populateCity = function() {
     
     $('#turns,#game-board,#cards').on('click', () => {
         $('#turns,#game-board,#cards').off('click');
-        $('td').removeClass('light highlight second');
+        $('td').removeClass('strong light highlight second');
         $('#add-in').removeClass(this.turnOrder[0]);
         $('#trips').addClass(this.turnOrder[0]);
         
@@ -178,7 +132,7 @@ TurnController.prototype.chooseIntensifier = function(doNext,value,cardPile) {
             function(){$('.'+cardPile.type+'-'+value).removeClass('highlight');$(this).removeClass('highlight');}
         ).on('click',function(){
             cardPile.addCard(value);
-            $('td').removeClass('highlight');
+            $('td').removeClass('light highlight');
             $('#secondary').html("");
             doNext();
         });
@@ -195,7 +149,7 @@ TurnController.prototype.chooseTiles = function() {
 };
 
 TurnController.prototype.takeTrip = function(nextTurn) {
-    $('td').removeClass('highlight');
+    $('td').removeClass('strong light highlight');
     
     var smallest = Math.min(this.sectionCards.queue.length,this.rowCards.queue.length,this.columnCards.queue.length);
     
@@ -206,9 +160,13 @@ TurnController.prototype.takeTrip = function(nextTurn) {
         var start = this.chooseTiles();
         var end = this.chooseTiles();
         $('#primary').html(start.slice(1).join() + ' -> ' + end.slice(1).join());
-        $(`#${start[0]},#${end[0]}`).addClass('highlight');
         
         var winners = this.board.bestPath(start[0],end[0]);
+        
+        $(`#${start[0]},#${end[0]}`).addClass('strong highlight');
+        winners.path.forEach(x=>$('#'+x).addClass('light highlight'));
+        $(`#${start[0]},#${end[0]}`).removeClass('light');
+        
         $('#primary').append(`<th>distance:</th><td>${winners.steps}</td>`);
     
         if(winners.modes.length > 1) {
@@ -218,6 +176,7 @@ TurnController.prototype.takeTrip = function(nextTurn) {
                 var child = $('#secondary td').last();
                 mode.forEach(path => child.addClass(path));
                 child.on('click',() => {
+                    $('td').removeClass('strong light highlight')
                     this.scoreWinners(mode);
                     $('#secondary').html("");
                     this.intensify(nextTurn,winners.steps,end);
@@ -239,25 +198,22 @@ TurnController.prototype.scoreWinners = function(winners) {
 };
 
 TurnController.prototype.buildHelper = function(coordinates,optionName,popCondition) {
-    var coordinateNumbers = coordinates.map(x => x.replace(/[^0-9\.]/g, ''));
     this.renderBoard();
-    $('#primary,#secondary').html("").off();
+    $('#primary,#secondary,#tertiary').html("").off();
     $('#game-board td').removeClass('highlight').off();
-    
-    var nextTurn = ()=>(popCondition > 0 ? this.buildTurn(popCondition) : this.populateCity());
     
     //this.cards.depopulate(space);
     //this.updateCards();
     
-    if(optionName === 'build station'){
+    if(optionName === 'build station' || optionName === 'intensify space'){
         [this.sectionCards,this.rowCards,this.columnCards].forEach((x,i) => {
             x.drawCards(1);
-            x.queue.unshift(coordinateNumbers[i]);
+            x.queue.unshift(coordinates[i]);
         });
         
-        this.takeTrip(nextTurn);
+        this.takeTrip(() => this.takeNextTurn(popCondition));
     } else {
-        nextTurn();
+        this.takeNextTurn(popCondition);
     }
 };
 
@@ -272,29 +228,36 @@ TurnController.prototype.buildTurn = function(number){
         var space = $(this).attr('id');
         var options = that.board.getOptions(space,player);
         var coordinates = $(this).attr('class').split(' ').filter(x => x.indexOf('-') > -1);
+        var coordinateNumbers = coordinates.map(x => x.replace(/[^0-9\.]/g, ''));
         
-        $('#primary,#secondary').off();
-        
-        if(options.turns > number) {
-            $('#primary').html('<th>This move is illegal</th>');
-            $('#secondary').html('<td>Try another square</td>');
-        } else {
-            $('#primary').html(`<th>space:</th><td>${coordinates.join(', ').replace(/-/g,': ')}</td><th>action:</th><td>${options.text}</td>`);
-            $('#primary').on('click',function() {
-                options['function']();
-                that.buildHelper(coordinates,options.text,number-options.turns);
-            });
-            
-            $('#secondary').html(`<th>player:</th><td class="${player}">${player}</td>`);
-            
-            if(options.alternate){
-                $('#secondary').append(`<th>secondary action:</th><td>${options.alternate}</td>`);
-                $('#secondary').on('click',function() {
-                    options['alternate function']();
-                    that.buildHelper(coordinates,options.alternate,number-options.turns);
+        var addTurn = function(choice,place) {
+            if (choice.turns > number) {
+                place.html('<th>This move is illegal</th><td>Try another square</td>');
+            } else {
+                place.append(`<th>action:</th><td>${choice.text}</td>`);
+                place.on('click',function(){
+                    choice['function']();
+                    that.buildHelper(coordinateNumbers,choice.text,number-choice.turns);
                 });
             }
+        };
+        
+        $('#primary,#secondary,#tertiary').html("").off();
+
+        $('#secondary').html(`<th>player:</th><td class="${player}">${player}</td>`);
+        $('#primary').html(`<th>space:</th><td>${coordinates.join(', ').replace(/-/g,': ')}</td>`);
+
+        addTurn(options.shift(),$('#primary'));
+        if(options.length > 0) {
+            addTurn(options.shift(),$('#secondary'));
         }
+        
+        addTurn({'text':'intensify space','function':()=>{
+            that.sectionCards.addCard(coordinateNumbers[0]);
+            that.rowCards.addCard(coordinateNumbers[1]);
+            that.columnCards.addCard(coordinateNumbers[2]);
+        },'turns':1},$('#tertiary'));
+        
     });
 };
 
@@ -302,5 +265,19 @@ TurnController.prototype.buildFirst = function() {
     $('#build div').addClass('circle');
     $("#trips").removeClass(this.turnOrder[0]);
     $("#build").addClass(this.turnOrder[0]);
-    this.buildTurn(2);
+    this.buildTurn(this.buildTurns);
+};
+
+//taken from https://bost.ocks.org/mike/shuffle/
+//This is the Fisher-Yates Shuffle
+Array.prototype.shuffle = function () {
+  var m = this.length, t, i;
+  while (m) {
+    i = Math.floor(Math.random() * m--);
+
+    // And swap it with the current element.
+    t = this[m];
+    this[m] = this[i];
+    this[i] = t;
+  }
 };
