@@ -88,11 +88,6 @@ TurnController.prototype.populateCity = function() {
     $('#add-in').addClass(this.turnOrder[0]);
 
     [this.sectionCards,this.rowCards,this.columnCards].forEach(x => {
-        var card = this.getRandom(x.cardsLeft.length);
-        $(`.highlight.${x.type}-${card}`).addClass('second');
-        $(`.${x.type}-${card}`).addClass('highlight');
-        $('#primary').append(`<th>${x.type}:</th><td>${card}</td>`);
-        x.addCard(card);
         x.fillQueue();
         this.updateCards();
     });

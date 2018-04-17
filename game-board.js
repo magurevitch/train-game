@@ -156,6 +156,15 @@ Cards.prototype.drawCards = function(limit) {
         this.cardsInPlay.shuffle();
         this.cardsIndex = this.cardsInPlay.length;
         this.trips++;
+        for(var i = 0; i < this.trips; i ++) {
+            var number = Math.floor(Math.random() * this.cardsLeft.length);
+            this.addCard(number);
+        }
+    }
+    
+    if(limit < 1) {
+        var number = Math.floor(Math.random() * this.cardsLeft.length);
+        this.addCard(number);
     }
     
     while(this.queue.length < limit && this.cardsIndex !== 0) {
