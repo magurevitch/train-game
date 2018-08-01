@@ -9,7 +9,7 @@ Your job, as the heads of those transit corporations: outbuild the other one, an
 
 ## The pieces
  * A game board, with some number of rectangular sections, each with the same number of squares in each row and column
- * Three card sections - corresponding to the sections, rows, and columns - each with the piles of cards that are not in the deck, the draw deck, the discard deck, an indicator of flips, and a queue
+ * Two card sections - corresponding to the neighborhood and plots within them - each with the piles of cards that are not in the deck, the draw deck, the discard deck, an indicator of flips, and a queue
  * Piles of pieces
  * A place to keep track of points
 
@@ -22,7 +22,7 @@ Each player takes turns, going in a circle. A turn consists of:
  4. Moving on to the next person's turn
 
 ## Populating the city
- 1. Randomly pick a section, row, and column. Put those cards into their respective discard piles, if they are not at max population.
+ 1. Randomly pick a neighborhood and plot. Put those cards into their respective discard piles, if they are not at max population.
  2. Fill the queues up to the number of flips that pile has done. It starts at 0, so you don't fill at first. If you run out of cards, the picking stops. If there are no cards in the draw pile, shuffle the discard pile, and increase the number of flips by 1.
 
 ## Taking Trips
@@ -46,10 +46,7 @@ When you build a station or intensify a square, take an extra trip using that st
  * As of now, the game has no ending condition. I was thinking once a certain number of piles are depleted, you end the game. Do you have other ideas?
  * If you have played around with the settings, are there any you really like? A certain number of squares, a certain configuration of hazard spaces?
  * Do you like the number of trips taken? Would you like it to be faster, and queue starts, but draw the destinations?
- * Would you like it to show who the winner is more clearly, or what path the trip took?
  * I am thinking about adding something if you build in a populated space. For example, any build in it depopulates the square, or is harder to build in it?
  * Should there be any way to change the end a turn early? Do you get cash? Pay for an extra turn? Shunt your extra build to a later turn? Steal a turn from later you? If you do that, do you get a token that blocks a build until you spend a build getting rid of it?
- * To slow down adding random squares, do you only choose one of the three piles on the add in phase?
  * Is there any feature that you might like to see that I don't have, or haven't mentioned?
- * Would you be happy simplifying the cards to two piles, one for section and one for where within that section?
  * What can I make clearer about these rules?

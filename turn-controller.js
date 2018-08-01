@@ -1,28 +1,29 @@
-function TurnController(sectionRows,rowsPerSection,sectionColumns,columnsPerSection,players,numCards,closeDist,buildTurns) {
-    this.board = new Board(sectionColumns*columnsPerSection,sectionRows*rowsPerSection,players,buildTurns);
-    this.sectionCards = new Cards(sectionRows*sectionColumns,numCards,"section");
-    this.rowCards = new Cards(rowsPerSection,numCards,"row");
-    this.columnCards = new Cards(columnsPerSection,numCards,"column");
+function TurnController(neighborhoodRows,rowsPerNeighborhood,neighborhoodColumns,columnsPerNeighborhood,players,numCards,closeDist,farDist,buildTurns) {
+    this.board = new Board(neighborhoodColumns*columnsPerNeighborhood,neighborhoodRows*rowsPerNeighborhood,players,buildTurns);
+    this.neighborhoodCards = new Cards(neighborhoodRows*neighborhoodColumns,numCards,"neighborhood");
+    this.plotCards = new Cards(rowsPerNeighborhood*columnsPerNeighborhood,numCards,"plot")
     this.buildTurns = buildTurns;
     
     this.turnOrder = players;
     this.closeDist = closeDist;
+    this.farDist = farDist;
     this.scores = {};
     players.forEach(player => this.scores[player] = 0);
     
-    populateGame(players,buildTurns,sectionRows,rowsPerSection,sectionColumns,columnsPerSection);
-    chooseHazards(this.board.spaces);
-    this.startGame(rowsPerSection,columnsPerSection);
+    populateGame(players,buildTurns,neighborhoodRows,rowsPerNeighborhood,neighborhoodColumns,columnsPerNeighborhood);
+    chooseHazards(this.board.spaces,neighborhoodColumns*columnsPerNeighborhood,columnsPerNeighborhood);
+    this.startGame(rowsPerNeighborhood,columnsPerNeighborhood);
 }
 
-TurnController.prototype.startGame = function(rowsPerSection,columnsPerSection){
+TurnController.prototype.startGame = function(rowsPerNeighborhood,columnsPerNeighborhood){
     this.updateTurnOrder();
     $('#secondary').html('<th>Start game</th>').on('click',() => {
         $('th,td,#secondary').off('click');
         
-        $('#column-pop').html(`<table><tr><td colspan=${columnsPerSection}>Column population</td></tr><tr>${range(columnsPerSection).map(column => '<td id="column-' + column + '"></td>').join('')}</tr><table>`);
-        $('#row-pop').html(`<table><tr><td rowspan=${rowsPerSection}>Row population</td><td id="row-${range(rowsPerSection).join('"></td></tr><tr><td id="row-')}"></td></tr><table>`);
-        $('#section-pop td').first().html('Section population');
+        $('#neighborhood-pop td').first().html('Neighborhood population');
+        $('#plot-pop td').first().html('Plot population');
+        
+        $('#secondary').html('')
         
         this.populateCity();
     });
@@ -51,7 +52,7 @@ TurnController.prototype.renderBoard = function() {
 };
 
 TurnController.prototype.updateCards = function () {
-    [this.sectionCards,this.rowCards,this.columnCards].forEach(x => this.updateCardSection(x));
+    [this.neighborhoodCards,this.plotCards].forEach(x => this.updateCardSection(x));
 };
 
 TurnController.prototype.updateCardSection = function (pile) {
@@ -87,7 +88,7 @@ TurnController.prototype.takeNextTurn = function (buildsLeft) {
 TurnController.prototype.populateCity = function() { 
     $('#add-in').addClass(this.turnOrder[0]);
 
-    [this.sectionCards,this.rowCards,this.columnCards].forEach(x => {
+    [this.neighborhoodCards,this.plotCards].forEach(x => {
         x.fillQueue();
         this.updateCards();
     });
@@ -105,48 +106,39 @@ TurnController.prototype.populateCity = function() {
 };
 
 TurnController.prototype.intensify = function(nextTurn,steps,end) {
-    var doNext = () => this.takeTrip(nextTurn);
-    
-    $('#secondary').html('<th>choose who to intensify:</th>');
-    [this.sectionCards,this.rowCards,this.columnCards].forEach((x,i) =>
-        $('#secondary').append(this.chooseIntensifier(doNext,end[i+1],x))
-    );
-    
-    if(steps > this.closeDist || $('#secondary').children().length === 1) {
-        $('#secondary').html('');
-        $('#game-board').one('click',doNext);
-    } else if ($('#secondary').children().length === 2) {
-        $('#game-board').one('click',()=>$('#secondary').children().last().click());
+    if(steps <= this.closeDist) {
+        $('#secondary').html('<th>Intensify:</th>');
+        [this.neighborhoodCards,this.plotCards].forEach((x,i) => this.intensifyPile(x, end[i+1]));
     }
+    
+    var that = this;
+    
+    $('#primary, #secondary, #game-board').on('click', function() {
+        $('#primary, #secondary, #game-board').off();
+        that.takeTrip(nextTurn);
+    });
 };
 
-TurnController.prototype.chooseIntensifier = function(doNext,value,cardPile) {
-    if(cardPile.cardsLeft[value] > 0) {
-        return $('<td>' + cardPile.type + ': ' + value + '</td>').hover(
-            function(){$('.'+cardPile.type+'-'+value).addClass('highlight');$(this).addClass('highlight');},
-            function(){$('.'+cardPile.type+'-'+value).removeClass('highlight');$(this).removeClass('highlight');}
-        ).on('click',function(){
-            cardPile.addCard(value);
-            $('td').removeClass('light highlight');
-            $('#secondary').html("");
-            doNext();
-        });
-    }
+TurnController.prototype.intensifyPile = function(cardPile, value) {
+    $(`.${cardPile.type}-${value}.highlight`).removeClass('light');
+    $(`.${cardPile.type}-${value}`).not('.highlight').addClass('light highlight');
+    $('#secondary').append(`<td>${cardPile.type}: ${value}</td>`);
+    cardPile.addCard(value);
+    this.updateCardSection(cardPile);
 };
 
 TurnController.prototype.chooseTiles = function() {
-    var section = this.sectionCards.queue.shift();
-    var row = this.rowCards.queue.shift();
-    var column = this.columnCards.queue.shift();
+    var neighborhood = this.neighborhoodCards.queue.shift();
+    var plot = this.plotCards.queue.shift();
     this.updateCards();
-    var tile = parseInt($(`.row-${row}.column-${column}.section-${section}`).attr('id'));
-    return [tile, section,row, column];
+    var tile = parseInt($(`.plot-${plot}.neighborhood-${neighborhood}`).attr('id'));
+    return [tile, neighborhood, plot];
 };
 
 TurnController.prototype.takeTrip = function(nextTurn) {
     $('td').removeClass('strong light highlight');
     
-    var smallest = Math.min(this.sectionCards.queue.length,this.rowCards.queue.length,this.columnCards.queue.length);
+    var smallest = Math.min(this.neighborhoodCards.queue.length,this.plotCards.queue.length);
     
     if(smallest < 2){
        $('#primary').html('');
@@ -157,12 +149,13 @@ TurnController.prototype.takeTrip = function(nextTurn) {
         $('#primary').html(start.slice(1).join() + ' -> ' + end.slice(1).join());
         
         var winners = this.board.bestPath(start[0],end[0]);
+        var steps = winners.steps;
         
         $(`#${start[0]},#${end[0]}`).addClass('strong highlight');
         winners.path.forEach(x=>$('#'+x).addClass('light highlight'));
         $(`#${start[0]},#${end[0]}`).removeClass('light');
         
-        $('#primary').append(`<th>distance:</th><td>${winners.steps}</td>`);
+        $('#primary').append(`<th>distance:</th><td>${steps}</td>`);
     
         if(winners.modes.length > 1) {
             $('#secondary').html('<th>choose the winners:</th>');
@@ -172,24 +165,26 @@ TurnController.prototype.takeTrip = function(nextTurn) {
                 mode.forEach(path => child.addClass(path));
                 child.on('click',() => {
                     $('td').removeClass('strong light highlight')
-                    this.scoreWinners(mode);
+                    this.scoreWinners(mode, steps);
                     $('#secondary').html("");
-                    this.intensify(nextTurn,winners.steps,end);
+                    this.intensify(nextTurn, steps, end);
                 });
             });
         } else {
-            this.scoreWinners(winners.modes[0]);
-            this.intensify(nextTurn,winners.steps,end);
+            this.scoreWinners(winners.modes[0], steps);
+            this.intensify(nextTurn, steps, end);
         }
     }
 };
 
-TurnController.prototype.scoreWinners = function(winners) {
-    var score = (winners.length > 1) ? 1 : 2;
-    winners.forEach(x => {
-        this.scores[x] += score;
-        $('#scores .' + x).addClass('highlight').html(this.scores[x]);
-    });
+TurnController.prototype.scoreWinners = function(winners, steps) {
+    if (steps < this.farDist){
+        var score = (winners.length > 1) ? 1 : 2;
+        winners.forEach(x => {
+            this.scores[x] += score;
+            $('#scores .' + x).addClass('highlight').html(this.scores[x]);
+        });
+    }
 };
 
 TurnController.prototype.buildHelper = function(coordinates,optionName,popCondition) {
@@ -197,11 +192,8 @@ TurnController.prototype.buildHelper = function(coordinates,optionName,popCondit
     $('#primary,#secondary,#tertiary').html("").off();
     $('#game-board td').removeClass('highlight').off();
     
-    //this.cards.depopulate(space);
-    //this.updateCards();
-    
     if(optionName === 'build station' || optionName === 'intensify space'){
-        [this.sectionCards,this.rowCards,this.columnCards].forEach((x,i) => {
+        [this.neighborhoodCards,this.plotCards].forEach((x,i) => {
             x.drawCards(1);
             x.queue.unshift(coordinates[i]);
         });
@@ -248,9 +240,8 @@ TurnController.prototype.buildTurn = function(number){
         }
         
         addTurn({'text':'intensify space','function':()=>{
-            that.sectionCards.addCard(coordinateNumbers[0]);
-            that.rowCards.addCard(coordinateNumbers[1]);
-            that.columnCards.addCard(coordinateNumbers[2]);
+            that.neighborhoodCards.addCard(coordinateNumbers[0]);
+            that.plotCards.addCard(coordinateNumbers[1]);
         },'turns':1},$('#tertiary'));
         
     });
@@ -261,18 +252,4 @@ TurnController.prototype.buildFirst = function() {
     $("#trips").removeClass(this.turnOrder[0]);
     $("#build").addClass(this.turnOrder[0]);
     this.buildTurn(this.buildTurns);
-};
-
-//taken from https://bost.ocks.org/mike/shuffle/
-//This is the Fisher-Yates Shuffle
-Array.prototype.shuffle = function () {
-  var m = this.length, t, i;
-  while (m) {
-    i = Math.floor(Math.random() * m--);
-
-    // And swap it with the current element.
-    t = this[m];
-    this[m] = this[i];
-    this[i] = t;
-  }
 };
